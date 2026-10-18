@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sah Family | Office Records</title>
+  <style>
+    :root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202b3c;background:#f4f6fa;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0}.top{background:#172a46;color:white;padding:26px max(22px,calc((100% - 1120px)/2))}.top h1{margin:0 0 5px;font-size:25px}.top p{margin:0;color:#d5dfed}.wrap{max-width:1120px;margin:26px auto;padding:0 20px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}.stat,.panel{background:white;border:1px solid #e2e7ef;border-radius:12px;padding:18px;box-shadow:0 3px 12px #1b315009}.stat span{display:block;color:#64748b;font-size:13px}.stat strong{display:block;font-size:27px;margin-top:8px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel h2{font-size:18px;margin:0 0 14px}.formgrid{display:grid;gap:10px}.formgrid input,.formgrid select,.formgrid textarea{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;background:white}.formgrid textarea{min-height:70px;resize:vertical}.btn{border:0;background:#2256a6;color:white;border-radius:7px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}.btn.secondary{background:#e8eef8;color:#204577}.btn.danger{background:#fff0f0;color:#a32c2c;padding:6px 9px}.actions{display:flex;gap:8px;flex-wrap:wrap}.tablewrap{overflow-x:auto;margin-top:16px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid #edf0f5;padding:10px 8px;vertical-align:top}th{color:#526176;font-weight:650}.empty{color:#718096;padding:16px 0}.message{margin:0 0 14px;padding:10px 12px;border-radius:7px;display:none}.message.show{display:block}.message.error{background:#fff0f0;color:#9e2424}.message.success{background:#eaf8ef;color:#17683a}.section{margin-top:18px}.muted{color:#64748b;font-size:13px}@media(max-width:780px){.columns{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.wrap{margin-top:16px}}
+  </style>
+</head>
+<body>
+<header class="top"><h1>Sah Family Office Records</h1><p>Department and staff management dashboard</p></header>
+<main class="wrap">
+  <div id="message" class="message" role="status"></div>
+  <section class="stats">
+    <div class="stat"><span>Total departments</span><strong id="departmentCount">—</strong></div>
+    <div class="stat"><span>Total staff members</span><strong id="staffCount">—</strong></div>
+    <div class="stat"><span>API status</span><strong id="apiStatus" style="font-size:20px">Checking…</strong></div>
+  </section>
+  <div class="columns">
+    <section class="panel">
+      <h2>Add a department</h2>
+      <form id="departmentForm" class="formgrid">
+        <input name="name" placeholder="Department name" required maxlength="100">
+        <input name="location" placeholder="Office location" maxlength="120">
+        <textarea name="description" placeholder="Department description" maxlength="500"></textarea>
+        <button class="btn" type="submit">Save department</button>
+      </form>
+      <div class="section"><h2>Departments</h2><div id="departmentsTable" class="muted">Loading departments…</div></div>
+    </section>
+    <section class="panel">
+      <h2>Add a staff member</h2>
+      <form id="staffForm" class="formgrid">
+        <input name="fullName" placeholder="Full name" required maxlength="120">
+        <input name="email" type="email" placeholder="Work email" required maxlength="180">
+        <input name="phone" placeholder="Phone number" maxlength="40">
+        <input name="jobTitle" placeholder="Job title" required maxlength="100">
+        <input name="salary" type="number" min="0" step="0.01" placeholder="Monthly salary" required>
+        <select name="departmentId" id="departmentSelect" required><option value="">Select a department</option></select>
+        <button class="btn" type="submit">Save staff member</button>
+      </form>
+      <div class="section"><h2>Staff records</h2><div id="staffTable" class="muted">Loading staff…</div></div>
+    </section>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let departments = [], staff = [];
+function showMessage(text, error=false){const el=$('message');el.textContent=text;el.className='message show '+(error?'error':'success');window.scrollTo({top:0,behavior:'smooth'});}
+async function api(path, options={}){const response=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});if(response.status===204)return null;const text=await response.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}if(!response.ok){const detail=data&&typeof data==='object'?Object.values(data).join(' '):data;throw new Error(detail||`Request failed (${response.status})`)}return data;}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function departmentName(id){return departments.find(d=>d.id===id)?.name||'Unknown department';}
+function renderDepartments(){ $('departmentCount').textContent=departments.length; $('departmentsTable').innerHTML=departments.length?`<div class="tablewrap"><table><thead><tr><th>Name</th><th>Location</th><th></th></tr></thead><tbody>${departments.map(d=>`<tr><td><strong>${esc(d.name)}</strong><br><span class="muted">${esc(d.description||'')}</span></td><td>${esc(d.location||'—')}</td><td><button class="btn danger" onclick="deleteDepartment('${esc(d.id)}')">Delete</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">No departments have been added yet.</p>'; $('departmentSelect').innerHTML='<option value="">Select a department</option>'+departments.map(d=>`<option value="${esc(d.id)}">${esc(d.name)}</option>`).join('');}
+function renderStaff(){ $('staffCount').textContent=staff.length; $('staffTable').innerHTML=staff.length?`<div class="tablewrap"><table><thead><tr><th>Staff member</th><th>Department</th><th>Salary</th><th></th></tr></thead><tbody>${staff.map(s=>`<tr><td><strong>${esc(s.fullName)}</strong><br><span class="muted">${esc(s.jobTitle)} · ${esc(s.email)}</span></td><td>${esc(departmentName(s.departmentId))}</td><td>${Number(s.salary||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><button class="btn danger" onclick="deleteStaff('${esc(s.id)}')">Delete</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">No staff records have been added yet.</p>';}
+async function refresh(){try{const health=await api('/api/health');$('apiStatus').textContent=health.status==='running'?'Online':'Unavailable';departments=await api('/api/departments');staff=await api('/api/staff');renderDepartments();renderStaff();}catch(e){$('apiStatus').textContent='Offline';showMessage('Could not load records. Make sure the application and MongoDB are running. '+e.message,true);}}
+$('departmentForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await api('/api/departments',{method:'POST',body:JSON.stringify({name:f.get('name').trim(),location:f.get('location').trim(),description:f.get('description').trim()})});e.currentTarget.reset();await refresh();showMessage('Department saved successfully.');}catch(err){showMessage(err.message,true);}});
+$('staffForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await api('/api/staff',{method:'POST',body:JSON.stringify({fullName:f.get('fullName').trim(),email:f.get('email').trim(),phone:f.get('phone').trim(),jobTitle:f.get('jobTitle').trim(),salary:Number(f.get('salary')),departmentId:f.get('departmentId')})});e.currentTarget.reset();await refresh();showMessage('Staff record saved successfully.');}catch(err){showMessage(err.message,true);}});
+async function deleteDepartment(id){if(!confirm('Delete this department? It cannot be deleted while staff are assigned to it.'))return;try{await api('/api/departments/'+encodeURIComponent(id),{method:'DELETE'});await refresh();showMessage('Department deleted.');}catch(e){showMessage(e.message,true);}}
+async function deleteStaff(id){if(!confirm('Delete this staff record?'))return;try{await api('/api/staff/'+encodeURIComponent(id),{method:'DELETE'});await refresh();showMessage('Staff record deleted.');}catch(e){showMessage(e.message,true);}}
+refresh();
+</script>
+</body>
+</html>

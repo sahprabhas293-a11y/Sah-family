@@ -115,3 +115,7 @@ git push -u origin main
 ```
 
 Do not commit database passwords, private connection strings, or real staff information.
+
+## React frontend
+
+The React + Vite UI is located in the separate `frontend/` folder. See `frontend/README.md` for setup and run instructions. Start the Spring Boot API on port 8080, then run `npm install` and `npm run dev` inside `frontend/`. The Vite development server proxies `/api` calls to the existing backend, so the backend endpoints and MongoDB data remain unchanged.
